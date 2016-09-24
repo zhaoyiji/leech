@@ -1,0 +1,74 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="/static/css/leech.css" />
+    <script src="/static/js/leech.js">
+    </script>
+</head>
+
+<body>
+
+<canvas id="kline" width="1040" height="440" style="border:1px solid #000000;">
+    Your browser does not support the canvas element.
+</canvas>
+<canvas id="part" width="1040" height="440" style="border:1px solid #000000;">
+    Your browser does not support the canvas element.
+</canvas>
+<canvas id="pen" width="1040" height="440" style="border:1px solid #000000;">
+    Your browser does not support the canvas element.
+</canvas>
+
+
+<script>
+    var HIGH = 0
+    var LOW = 1
+    var CLOSED = 2
+    var DT = 3
+    var INCLUDE = 4
+    var TURNOFF = 5
+    var PART = 6
+
+    var line = {{kline|safe}};
+    var part = {{part|safe}};
+    var pen = {{pen|safe}};
+    var seg = {{seg|safe}}
+{#    alert(pen)#}
+
+    var low = 0;
+    var base = 0;
+
+    var canvas_kline = document.getElementById("kline");
+    var ctx_kline = canvas_kline.getContext("2d");
+
+    var canvas_part = document.getElementById("part");
+    var ctx_part = canvas_part.getContext("2d");
+
+    var canvas_pen = document.getElementById("pen");
+    var ctx_pen = canvas_pen.getContext("2d");
+
+    low = {{ min|safe }};
+    base = {{ base|safe }};
+    for (var i in line)
+    {
+        DrawLine(base, 4*i, line[i][LOW]-low, line[i][HIGH]-low, ctx_kline, "normal", "ignore", false);
+    }
+
+    for (var i in part)
+    {
+        DrawLine(base, 4*i, part[i][LOW]-low, part[i][HIGH]-low, ctx_part, part[i][INCLUDE], part[i][PART], false);
+    }
+
+    DrawPen(base, low, pen, "black",ctx_pen);
+    DrawPen(base, low, seg, "blue", ctx_pen);
+
+</script>
+
+{#{{src|safe}}#}
+{#<script>#}
+{#    alert({{b}})#}
+{#</script>#}
+
+</body>
+
+</html>
