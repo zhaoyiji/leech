@@ -6,7 +6,7 @@ NOW = 0
 DATE = 1
 TIME = 2
 
-RAW_NOW = 0
+RAW_NOW = 4
 RAW_DATE = 31
 RAW_TIME = 32
 
@@ -19,6 +19,9 @@ LOW = 1
 CLOSED = 2
 DT = 3
 MIN = 4
+MARK = 5
+MARK_END = "END"
+MARK_ING = "ING"
 
 T0935 = 575
 T1130 = 690
@@ -26,6 +29,8 @@ T1200 = 720
 T1305 = 785
 T1500 = 900
 T1530 = 930
+
+REPEAT = 3
 
 
 class KLine(object):
@@ -64,7 +69,7 @@ class KLine(object):
         if curr > self.high:
             self.high = curr
             mark = True
-        elif curr < self.low:
+        if curr < self.low:
             self.low = curr
             mark = True
 
@@ -78,37 +83,52 @@ class KLine1Min(KLine):
         self._mark_0931 = False  # 标记是否是第一个数据
         self._mark_1301 = False
         self._mark = False
+        self._count = 0
         KLine.__init__(self, code)
 
     def get_kline(self, data):
-        r = [float(data[RAW_NOW]), data[RAW_DATE], data[RAW_TIME]]
+        # r = [float(data[RAW_NOW]), data[RAW_DATE], data[RAW_TIME]
+        r = [data[NOW], data[DATE], data[TIME]]
         k1 = []
         dt = r[DATE] + " " + r[TIME]
-        if dt == self.datetime:  # desert the same record
-            return k1
+        # if dt == self.datetime:  # desert the same record, 这里不能丢弃,丢弃会影响5分钟K线的处理
+        #     return k1
 
         t = r[TIME].split(':')
         minute = int(t[HOUR])*60 + int(t[MINUTE])  # convert hour to seconds
         if self.minute != minute:  # next minute time record is coming
-            if abs(1000000.00 - self.low) < 1:  # check if the first record
+            self._mark = False
+            self._count = 0
+            if self.minute == 0:  # check if the first record
                 self.high = self.low = r[NOW]
             else:
-                k1 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                k1 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
                 self.high = self.low = r[NOW]  # next k line, reset the high and low
             self.minute = minute  # update the minute
+            self.datetime = dt  # update the datetime
         else:  # calc the high and low
-            self._set_max_min(r[NOW])
+            if self._mark is False:
+                res = self._set_max_min(r[NOW])
+                if res is False:
+                    self._count += 1
+                    if self._count == REPEAT:
+                        k1 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_END]
+                        self._count = 0
+                        self._mark = True
 
-        self.datetime = dt  # update the datetime
+                self.datetime = dt  # update the datetime
 
         return k1
 
     def store(self, k):
         if len(k):
             # print k
-            self._conn.execute("INSERT INTO min1 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
-                               (k[HIGH], k[LOW], k[CLOSED], k[DT]))
-            self._conn.commit()
+            try:
+                self._conn.execute("INSERT INTO min1 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
+                                   (k[HIGH], k[LOW], k[CLOSED], k[DT]))
+                self._conn.commit()
+            except Exception, e:
+                print "sql insert e is ", e
             return True
         else:
             return False
@@ -161,18 +181,18 @@ class KLine5Min(KLine):
         elif minute < T1130:
             if self._mark_0935:  # (1), 此时_mark5_04, _mark5_59必然是False
                 self._mark_0935 = False
-                k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
 
             if (minute % 10) / 5 == 0:
                 self._mark_04 = True
                 if self._mark_59:  # (2) 此处跟（1）不可能同时发生
                     self._mark_59 = False
-                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
             else:
                 self._mark_59 = True
                 if self._mark_04:  # (3) 此处跟（1）不可能同时发生
                     self._mark_04 = False
-                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
 
             self._set_max_min(k[NOW])
             self.minute = minute
@@ -180,11 +200,11 @@ class KLine5Min(KLine):
         elif minute < T1200:  # 时间统一标注为 "xxxx-xx-xx 11:29:59"
             if self._mark_59:  # 25-29的数据还没有完成,如果完成了就把数据丢掉
                 res = self._set_max_min(k[NOW])
-                if res is False:  # 不存在数据更新就认为结束了
+                if res is False or k[MARK] == MARK_END:  # 不存在数据更新就认为结束了
                     self._mark_59 = False
                     dt = k[DT].split(' ')
                     st = dt[0] + " " + "11:29:59"
-                    k5 = [self.high, self.low, self.closed, st, self.minute]
+                    k5 = [self.high, self.low, self.closed, st, self.minute, MARK_END]
         elif minute < T1305:
             self._set_max_min(k[NOW])
             self.minute = minute
@@ -193,18 +213,18 @@ class KLine5Min(KLine):
         elif minute < T1500:
             if self._mark_1305:
                 self._mark_1305 = False
-                k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
 
             if (minute % 10) / 5 == 0:
                 self._mark_04 = True
                 if self._mark_59:
                     self._mark_59 = False
-                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
             else:
                 self._mark_59 = True
                 if self._mark_04:
                     self._mark_04 = False
-                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute]
+                    k5 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
 
             self._set_max_min(k[NOW])
             self.minute = minute
@@ -212,11 +232,11 @@ class KLine5Min(KLine):
         elif minute < T1530:  # 时间统一标注为 "xxxx-xx-xx 14:59:59"
             if self._mark_59:  # 25-29的数据还没有完成,如果完成了就把数据丢掉
                 res = self._set_max_min(k[NOW])
-                if res is False:  # 不存在数据更新就认为结束了
+                if res is False or k[MARK] == MARK_END:  # 不存在数据更新活着1分钟K线带有结束标志就认为结束了
                     self._mark_59 = False
                     dt = k[DT].split(' ')
                     st = dt[0] + " " + "14:59:59"
-                    k5 = [self.high, self.low, self.closed, st, self.minute]
+                    k5 = [self.high, self.low, self.closed, st, self.minute, MARK_END]
         else:
             return []
 
@@ -225,9 +245,12 @@ class KLine5Min(KLine):
     def store(self, k):
         if len(k):
             # print k
-            self._conn.execute("INSERT INTO min5 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
-                               (k[HIGH], k[LOW], k[CLOSED], k[DT]))
-            self._conn.commit()
+            try:
+                self._conn.execute("INSERT INTO min5 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
+                                   (k[HIGH], k[LOW], k[CLOSED], k[DT]))
+                self._conn.commit()
+            except Exception, e:
+                print "sql insert e is ", e
             return True
         else:
             return False
@@ -266,62 +289,73 @@ class KLineMonth(KLine):
 #
 #     pk = kline.get_peek(250)
 #     print pk
-
+#
 # if __name__ == "__main__":
-#     rec0 = [10.06, '2016-08-15', '9:24:02']
-#     rec1 = [10.020, '2016-08-15', '9:25:02']
-#     rec2 = [10.00, '2016-08-15', '9:26:02']
-#     rec3 = [10.02, '2016-08-15', '9:27:02']
-#     rec4 = [10.50, '2016-08-15', '9:28:03']
-#     rec5 = [10.40, '2016-08-15', '9:29:02']
-#     rec6 = [10.10, '2016-08-15', '9:30:03']
-#     rec7 = [10.01, '2016-08-15', '9:31:04']
-#     rec8 = [10.60, '2016-08-15', '9:32:06']
-#     rec9 = [10.60, '2016-08-15', '9:35:04']
-#     rec10 = [10.01, '2016-08-15', '9:36:06']
+#     rec0 = [10.06, '2016-08-15', '14:54:02']
+#     rec1 = [10.020, '2016-08-15', '14:55:02']
+#     rec2 = [10.00, '2016-08-15', '14:55:03']
+#     rec3 = [10.02, '2016-08-15', '14:56:02']
+#     rec4 = [10.50, '2016-08-15', '14:57:03']
+#     rec5 = [10.40, '2016-08-15', '14:58:02']
+#     rec6 = [10.10, '2016-08-15', '14:59:03']
+#     rec7 = [10.01, '2016-08-15', '14:59:04']
+#     rec8 = [10.58, '2016-08-15', '15:01:06']
+#     rec9 = [10.58, '2016-08-15', '15:02:04']
+#     rec10 = [10.58, '2016-08-15', '15:03:04']
 #     kline1 = KLine1Min("sh000001")
 #     kline5 = KLine5Min("sh000001")
 #     k1 = kline1.get_kline(rec0)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec1)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec2)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec3)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec4)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec5)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec6)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec7)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec8)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec9)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
 #     k1 = kline1.get_kline(rec10)
 #     k5 = kline5.get_kline(k1)
 #     print k5
 #     kline1.store(k1)
+#     kline5.store(k5)
