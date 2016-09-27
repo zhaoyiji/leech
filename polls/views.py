@@ -19,8 +19,10 @@ def index(request):
     # print part
     print "len(part) = ", len(part)
     peek = kline.get_peek(250)
-    print peek
+    print "peek: ", peek
     base = 400/(float(peek[0]) - float(peek[1]))
+    base = 14
+    print "base: ", base
     lines = {"kline": json.dumps(k),
              "part": json.dumps(part),
              "pen": json.dumps(pen),
