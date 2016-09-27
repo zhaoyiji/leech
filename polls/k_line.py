@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 import sqlite3
+import config
 
 NOW = 0
 DATE = 1
@@ -30,7 +31,7 @@ T1305 = 785
 T1500 = 900
 T1530 = 930
 
-REPEAT = 3
+REPEAT = 8  # 8-9最合理,不超过60s,不会计算入下一条K线,又可以最大化低概率事件.
 
 
 class KLine(object):
@@ -65,13 +66,14 @@ class KLine(object):
         print count
 
     def _set_max_min(self, curr):
-        mark = False  # 标记数据有变化
+        mark = True  # 标记数据有变化,False表示数据没变化
         if curr > self.high:
             self.high = curr
-            mark = True
         if curr < self.low:
             self.low = curr
-            mark = True
+
+        if self.closed == curr:
+            mark = False
 
         self.closed = curr
 
@@ -87,8 +89,10 @@ class KLine1Min(KLine):
         KLine.__init__(self, code)
 
     def get_kline(self, data):
-        # r = [float(data[RAW_NOW]), data[RAW_DATE], data[RAW_TIME]
-        r = [data[NOW], data[DATE], data[TIME]]
+        r = [float(data[RAW_NOW]), data[RAW_DATE], data[RAW_TIME]]
+        # r = [data[NOW], data[DATE], data[TIME]]
+        print "raw_data: ", r
+        config.LOGGER.info("raw_data: %s %s %s", str(r[0]), str(r[1]), str(r[2]))
         k1 = []
         dt = r[DATE] + " " + r[TIME]
         # if dt == self.datetime:  # desert the same record, 这里不能丢弃,丢弃会影响5分钟K线的处理
@@ -100,12 +104,13 @@ class KLine1Min(KLine):
             self._mark = False
             self._count = 0
             if self.minute == 0:  # check if the first record
-                self.high = self.low = r[NOW]
+                self.high = self.low = self.closed = r[NOW]
             else:
                 k1 = [self.high, self.low, self.closed, self.datetime, self.minute, MARK_ING]
                 self.high = self.low = r[NOW]  # next k line, reset the high and low
             self.minute = minute  # update the minute
             self.datetime = dt  # update the datetime
+            self.closed = r[NOW]
         else:  # calc the high and low
             if self._mark is False:
                 res = self._set_max_min(r[NOW])
@@ -122,7 +127,8 @@ class KLine1Min(KLine):
 
     def store(self, k):
         if len(k):
-            # print k
+            print "k1: ", k
+            config.LOGGER.info("k1: %s %s %s %s", str(k[0]), str(k[1]), str(k[2]), str(k[3]))
             try:
                 self._conn.execute("INSERT INTO min1 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
                                    (k[HIGH], k[LOW], k[CLOSED], k[DT]))
@@ -169,7 +175,7 @@ class KLine5Min(KLine):
         :return: 列表形式的单根5分钟K线或者[]
         """
         if len(k) < 1:
-            return[]
+            return []
 
         minute = k[MIN]
         k5 = []
@@ -240,11 +246,17 @@ class KLine5Min(KLine):
         else:
             return []
 
+        if len(k5) > 0:
+            self.high = 0.0
+            self.low = 1000000.00
+            self.closed = 0.0
+
         return k5
 
     def store(self, k):
         if len(k):
-            # print k
+            print "k5: ", k
+            config.LOGGER.info("k5: %s %s %s %s", str(k[0]), str(k[1]), str(k[2]), str(k[3]))
             try:
                 self._conn.execute("INSERT INTO min5 (high, low, closed, fetch_time) VALUES (?, ?, ?, ?)",
                                    (k[HIGH], k[LOW], k[CLOSED], k[DT]))
@@ -281,6 +293,43 @@ class KLineDay(KLine):
 class KLineMonth(KLine):
     pass
 
+
+# if __name__ == "__main__":
+#     kline1 = KLine1Min("sh000001")
+#     kline5 = KLine5Min("sh000001")
+#     k = [[2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", "15:01:03"],
+#          [2980.4295, "2016-09-26", " 15:00:47"],
+#          [2980.6811, "2016-09-26", " 14:59:57"],
+#          [2980.7904, "2016-09-26", " 14:58:57"],
+#          [2980.7625, "2016-09-26", " 14:57:57"],
+#          [2981.1489, "2016-09-26", " 14:56:57"],
+#          [2981.6039, "2016-09-26", " 14:55:57"],
+#          [2982.0711, "2016-09-26", " 14:54:52"],
+#          [2983.1922, "2016-09-26", " 14:53:57"],
+#          [2983.971, "2016-09-26", " 14:52:57"],
+#          [2985.3906, "2016-09-26", " 14:51:57"],
+#          [2986.9492, "2016-09-26", " 14:50:57"],
+#          [2987.1787, "2016-09-26", " 14:49:57"],
+#          [2988.2995, "2016-09-26", " 14:48:56"]]
+#     k.reverse()
+#
+#     for i in range(0, 25):
+#         k1 = kline1.get_kline(k[i])
+#         print "k1:", k1
+#         k5 = kline5.get_kline(k1)
+#         print "k5: ", k5
+
 # if __name__ == "__main__":
 #     kline = KLine1Min("sh000001")
 #     rec = kline.fetch(250)
@@ -289,7 +338,7 @@ class KLineMonth(KLine):
 #
 #     pk = kline.get_peek(250)
 #     print pk
-#
+
 # if __name__ == "__main__":
 #     rec0 = [10.06, '2016-08-15', '14:54:02']
 #     rec1 = [10.020, '2016-08-15', '14:55:02']
