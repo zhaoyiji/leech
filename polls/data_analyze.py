@@ -47,7 +47,8 @@ class HistoryData(object):
     def __init__(self, code):
         self._code = code
         self._line = []
-        self._include = []
+        # self._include = []
+        self._exclude = []
         self._turnoff = []
         self._index = []
         self._part = []
@@ -72,6 +73,9 @@ class HistoryData(object):
         print "### _index #############################################"
         self._index = self._get_part_index()  # 计算分型并且得到分型的坐标
         print self._index
+        print "### _index #############################################"
+        self._exclude = self._get_exclude()
+        print self._exclude
         print "### _part #############################################"
         self._part = self._get_part()  # 标记分型
         print self._part
@@ -125,6 +129,57 @@ class HistoryData(object):
             self._segment[i] += self._segment[i-1]
 
         return self._segment
+
+    @classmethod
+    def _get_point_v2(cls, pen):
+        """通过笔得到线段
+
+        算法逻辑:
+        [1]:假定第一个分型为线段起点
+        [2]:第一笔的方向为主方向,第二笔的方向为次方向,同时计算2组标准特征向量(做包含处理), pen[0][1] > pen[1][1]为下,否则为上
+        [3]:计算出主方向的特征序列分型,第一笔向下,则计算底分型,反之计算顶分型 特征序列为 p1p2-p3p4-p5p6...
+        [4]:计算出次方向的特征序列分型,第二笔向上,则计算顶分型,反之计算底分型 特征序列为 p0p1-p2p3-p4p5...
+        [5]:[3]计算得到的分型比[4]得到的分型先出现,则立刻得到了此次线段端点,计算结束
+        [6]:[4]计算得到的分型比[3]得到的分型先出现,如果第一笔向下,分型顶比线段起点高,则立刻得到了线段端点,该端点时上一个端点的延续
+            ,比线段起点低,则忽略该分型,继续向下计算。
+
+        其他说明:这里可能出现 线段端点 高-高,低-低的情况,高高则忽略上一个高,低低则忽略上一个低
+
+        :param pen:
+            pen[i][0] = index
+            pen[i][1] = val
+        :return:
+            point[0] = index
+        """
+        if len(pen) < 5:
+            return -1
+
+        direct = "up"
+        if pen[0][1] > pen[1][1]:  # 不存在==的情况
+            direct = "down"
+
+        if direct == "down":
+            g1 = pen[0][1]
+            d1 = pen[1][1]
+            dd1 = pen[1][1]
+            gg1 = pen[2][1]
+            g2 = d2 = g3 = d3 = 0
+            gg2 = dd2 = gg3 = dd3 = 0
+            for i in range(3, len(pen)):
+                if i % 2 != 0:
+                    if g2 == 0:
+                        g2 = pen[i-1][1]
+                        d2 = pen[i][1]
+                        continue
+                else:
+                    if dd2 == 0:
+                        dd2 = pen[i-1][1]
+                        gg2 = pen[i][1]
+
+        else:  # direct == "up"
+            pass
+
+        return
 
     @classmethod
     def get_point(cls, pen):
@@ -320,6 +375,13 @@ class HistoryData(object):
 
         return index
 
+    def _get_exclude(self):
+        for item in self._turnoff:
+            if item[INCLUDE] != INCLUDE_STR:
+                self._exclude.append(item)
+
+        return self._exclude
+
     def _mark_turnoff(self):
         """标记转折点并且解决K线包含关系.
 
@@ -375,6 +437,12 @@ class HistoryData(object):
                         direction = DOWN
 
         return turnoff
+
+    def format_exclude_view(self):
+        return self._exclude
+
+    def format_turnoff_view(self):
+        return self._turnoff
 
     def format_part_view(self):
         line = self._turnoff[:]  # _turnoff 是列表，_line是元组，选择使用_turnoff
