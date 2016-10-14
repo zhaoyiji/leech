@@ -39,6 +39,13 @@ MA20 = 20
 MA60 = 60
 MA250 = 250
 
+D1 = 0
+G1 = 1
+D2 = 2
+G2 = 3
+START = 4
+MAJOR = 1
+MINOR = 2
 
 class HistoryData(object):
     """Data Analyze
@@ -153,35 +160,61 @@ class HistoryData(object):
         :return:
             point[0] = index
         """
-        if len(pen) < 5:
-            return -1
+        init = HistoryData.get_seg_init(pen)
+        if len(init) < 0:
+            return []
 
-        direct = "up"
-        if pen[0][1] > pen[1][1]:  # 不存在==的情况
-            direct = "down"
+        direct = init[0]
+        index = -1
+        d2 = g2 = 0
+        dd2 = gg2 = 0
+        d = g = 0
 
         if direct == "down":
-            g1 = pen[0][1]
-            d1 = pen[1][1]
-            dd1 = pen[1][1]
-            gg1 = pen[2][1]
-            g2 = d2 = g3 = d3 = 0
-            gg2 = dd2 = gg3 = dd3 = 0
-            for i in range(3, len(pen)):
-                if i % 2 != 0:
-                    if g2 == 0:
-                        g2 = pen[i-1][1]
-                        d2 = pen[i][1]
-                        continue
-                else:
-                    if dd2 == 0:
-                        dd2 = pen[i-1][1]
-                        gg2 = pen[i][1]
-
+            start = init[1][START]
+            d2 = init[MAJOR][D2]
+            g2 = init[MAJOR][G2]
+            dd2 = init[MAJOR][D2]
+            gg2 = init[MAJOR][G2]
+            for i in range(start+1, len(pen)):
+                if i % 2 == 0:
+                    d = pen[i-1][VAL]
+                    g = pen[i][VAL]
+                    if d > d2:
+                        if g > g2:  # 高-高
+                            index = i
+                            break
+                        else:  # 高-低，包含关系，前包后
+                            g2 = g
+                    else:
+                        if g > g2:  # 低-高，包含关系，后包前
+                            d2 = d
+                        else:  # 低-低
+                            d2 = d
+                            g2 = g
+                else:  # i%2 != 0
+                    g = pen[i-1][VAL]
+                    d = pen[i][VAL]
+                    if d < dd2:
+                        if g < gg2:  # 低-低
+                            index = i  # 未必break，需要与上一个高位比较高低
+                            if gg2 > pen[0][VAL]:  # 比上一个高点高，则这个高点有效
+                                index = i
+                                break
+                            else:  # 比上一个高点低，无效顶
+                                pass  # ?
+                        else:  # 低-高,包含关系，
+                            gg2 = g
+                    else:
+                        if g < gg2:  # 高-低，包含关系
+                            dd2 = d
+                        else:  # 高-高
+                            dd2 = d
+                            gg2 = g
         else:  # direct == "up"
             pass
 
-        return
+        return index
 
     @classmethod
     def get_seg_init(cls, pen):
@@ -191,6 +224,7 @@ class HistoryData(object):
             pen[i][0] = index
             pen[i][1] = val
         :return: ["direct", [d1, g1, d2, g2, pos], [dd1, gg1, dd2, gg2, pos]]
+                ["direct", major, minor]
         """
         if len(pen) < 5:
             return []
@@ -233,7 +267,7 @@ class HistoryData(object):
                     g = pen[i-1][VAL]
                     d = pen[i][VAL]
                     if d > dd1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                        if g > gg1:  # 高-高, 趋势还在向上，没意义忽略
+                        if g > gg1:  #
                             major = [dd1, gg1, d, g, i]  # 得到符合要求的特征向量
                             if len(minor) > 0:
                                 break
