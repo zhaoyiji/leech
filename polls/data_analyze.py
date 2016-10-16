@@ -44,6 +44,7 @@ G1 = 1
 D2 = 2
 G2 = 3
 START = 4
+INIT = 1
 MAJOR = 1
 MINOR = 2
 
@@ -162,7 +163,7 @@ class HistoryData(object):
         """
         major = HistoryData.get_seg_init_major(pen)
         minor = HistoryData.get_seg_init_minor(pen)
-        if len(init) < 0:
+        if len(minor) < 1 or len(major) < 1:
             return []
 
         direct = init[0]
@@ -218,6 +219,49 @@ class HistoryData(object):
         return index
 
     @classmethod
+    def get_seg_minor(cls, pen, init):
+        if init:
+            direct = init[0]
+            start = init[INIT][START]
+            d2 = init[D1]
+            g2 = init[D2]
+            if direct == "down":
+                for i in range(start+2, len(pen), 2):
+                    d = pen[i][VAL]
+                    g = pen[i-1][VAL]
+                    if d < d2:
+                        if g < g2:  # 低-低,形成了顶分型,符合要求
+                            return ["down", d2, g2, d, g, i]
+                        else:  # 低-高,包含关系,后包前
+                            g2 = g
+                    else:
+                        if g < g2:  # 高-低,包含关系,前包后
+                            d2 = d
+                        else:  # 高-高,忽略g2d2这一笔,继续向下
+                            d2 = d
+                            g2 = g
+            else:
+                for i in range(start+2, len(pen), 2):
+                    d = pen[i][VAL]
+                    g = pen[i - 1][VAL]
+                    if d < d2:
+                        if g < g2:  # 低-低,形成了顶分型,符合要求
+                            return ["down", d2, g2, d, g, i]
+                        else:  # 低-高,包含关系,后包前
+                            g2 = g
+                    else:
+                        if g < g2:  # 高-低,包含关系,前包后
+                            d2 = d
+                        else:  # 高-高,忽略g2d2这一笔,继续向下
+                            d2 = d
+        else:
+            return -1
+
+    @classmethod
+    def get_seg_major(cls, pen):
+        pass
+
+    @classmethod
     def get_seg_init_minor(cls, pen):
         """ 线段端点计算初始化,得到标准特征序列的初始化分型的前2根，同时计算主方向，次方向。
 
@@ -227,7 +271,7 @@ class HistoryData(object):
         :return: ["direct", [d1, g1, d2, g2, pos]]
                 ["direct", init]
         """
-        if len(pen) < 5:
+        if len(pen) < 6:
             return []
 
         init = []
@@ -286,7 +330,7 @@ class HistoryData(object):
         :return: ["direct", [d1, g1, d2, g2, pos]]
                 ["direct", init]
         """
-        if len(pen) < 5:
+        if len(pen) < 7:
             return []
 
         init = []
