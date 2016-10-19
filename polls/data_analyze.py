@@ -49,7 +49,6 @@ MAJOR = 1
 MINOR = 2
 
 POS = 5
-PEEK = 7
 
 
 class HistoryData(object):
@@ -165,27 +164,25 @@ class HistoryData(object):
         :return:
             point[0] = index
         """
-        major = HistoryData.get_seg_init_major(pen)
-        minor = HistoryData.get_seg_init_minor(pen)
-
-        negative = HistoryData.get_seg_minor(pen, minor)
-        positive = HistoryData.get_seg_minor(pen, major)
-        if negative:
-            if positive:
-                if positive[POS] < negative[POS]:
-                    return positive[POS]
+        minor = HistoryData.get_seg_minor(pen)
+        major = HistoryData.get_seg_minor(pen)
+        if minor:
+            if major:
+                if major[POS] < minor[POS]:
+                    return major[POS]
                 else:
-                    return negative[POS]
+                    return minor[POS]
             else:
-                return negative[POS]
+                return minor[POS]
         else:
-            if positive:
-                return positive[POS]
+            if major:
+                return major[POS]
             else:
                 return -1
 
     @classmethod
-    def get_seg_minor(cls, pen, init):
+    def get_seg_minor(cls, pen):
+        init = HistoryData.get_seg_init_minor(pen)
         if init:
             direct = init[0]
             start = init[INIT][START]
@@ -198,7 +195,7 @@ class HistoryData(object):
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
                             if g2 > pen[0][VAL]:  # 顶不高于上一个顶，忽略，高于上一个顶才有效
-                                return ["down", d2, g2, d, g, i, TOP, g2]
+                                return ["down", d2, g2, d, g, i]
                         else:  # 低-高,包含关系,后包前
                             g2 = g
                     else:
@@ -214,7 +211,7 @@ class HistoryData(object):
                     if d > d2:
                         if g > g2:  # 低-低,形成了底分型,符合要求
                             if d2 < pen[0][VAL]:  # 底不低于上一个底，忽略，低于上一个底才有效
-                                return ["up", d2, g2, d, g, i, BOT, d2]
+                                return ["up", d2, g2, d, g, i]
                         else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
@@ -227,7 +224,8 @@ class HistoryData(object):
             return []
 
     @classmethod
-    def get_seg_major(cls, pen, init):
+    def get_seg_major(cls, pen):
+        init = HistoryData.get_seg_init_major(pen)
         if init:
             direct = init[0]
             start = init[INIT][START]
@@ -239,12 +237,12 @@ class HistoryData(object):
                     g = pen[i][VAL]
                     if d > d2:
                         if g > g2:  # 高-高,形成了底分型,符合要求
-                            return ["down", d2, g2, d, g, i, BOT, d2]
+                            return ["down", d2, g2, d, g, i]
                         else:  # 高-低,包含关系,前包后
-                            d2 = d
+                            g2 = g
                     else:
                         if g > g2:  # 低-高,包含关系,后包前
-                            g2 = g
+                            d2 = d
                         else:  # 高-高,忽略g2d2这一笔,继续向下
                             d2 = d
                             g2 = g
@@ -254,12 +252,12 @@ class HistoryData(object):
                     g = pen[i-1][VAL]
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
-                            return ["up", d2, g2, d, g, i, TOP, g2]
+                            return ["up", d2, g2, d, g, i]
                         else:  # 低-高,包含关系,后包前
-                            d2 = d
+                            g2 = g
                     else:
                         if g < g2:  # 高-低,包含关系,前包后
-                            g2 = g
+                            d2 = d
                         else:  # 高-高,忽略d2g2这一笔,继续向下
                             d2 = d
                             g2 = g
@@ -287,41 +285,39 @@ class HistoryData(object):
         if direct == "up":
             d1 = pen[0][VAL]
             g1 = pen[1][VAL]
-            for i in range(3, len(pen)):
-                if i % 2 != 0:  # 次方向，计算趋势向下特征向量，特征向量方向为低到高,最终目标是得到底分型
-                    d = pen[i-1][VAL]
-                    g = pen[i][VAL]
-                    if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                        if g > g1:  # 高-高 趋势还在向上,前面一条可以忽略了
-                            d1 = d
-                            g1 = g
-                        else:  # 高-低,包含关系，前包后
-                            g1 = g
-                    else:
-                        if g >= g1:  # 低-高，包含关系,后包前
-                            d1 = d
-                        else:  # 低-低
-                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                            break
+            for i in range(3, len(pen), 2):  # 次方向，计算趋势向下特征向量，特征向量方向为低到高,最终目标是得到底分型
+                d = pen[i-1][VAL]
+                g = pen[i][VAL]
+                if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
+                    if g > g1:  # 高-高 趋势还在向上,前面一条可以忽略了
+                        d1 = d
+                        g1 = g
+                    else:  # 高-低,包含关系，前包后
+                        g1 = g
+                else:
+                    if g >= g1:  # 低-高，包含关系,后包前
+                        d1 = d
+                    else:  # 低-低
+                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                        break
         else:  # direct is "down"
             d1 = pen[1][VAL]
-            g1 = pen[2][VAL]
-            for i in range(3, len(pen)):
-                if i % 2 != 0:  # 次方向，计算趋势向上特征向量，特征向量方向为高到低,最终目标是得到顶分型
-                    d = pen[i][VAL]
-                    g = pen[i-1][VAL]
-                    if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                        if g > g1:  # 高-高
-                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                            break
-                        else:  # 高-低,包含关系，前包后
-                            d1 = d
-                    else:
-                        if g >= g1:  # 低-高，包含关系,后包前
-                            g1 = g
-                        else:  # 低-低 趋势还在向下,前面一条可以忽略了
-                            d1 = d
-                            g1 = g
+            g1 = pen[0][VAL]
+            for i in range(3, len(pen), 2):  # 次方向，计算趋势向上特征向量，特征向量方向为高到低,最终目标是得到顶分型
+                d = pen[i][VAL]
+                g = pen[i-1][VAL]
+                if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
+                    if g > g1:  # 高-高
+                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                        break
+                    else:  # 高-低,包含关系，前包后
+                        d1 = d
+                else:
+                    if g >= g1:  # 低-高，包含关系,后包前
+                        g1 = g
+                    else:  # 低-低 趋势还在向下,前面一条可以忽略了
+                        d1 = d
+                        g1 = g
 
         return [direct, init]
 
@@ -346,41 +342,39 @@ class HistoryData(object):
         if direct == "up":
             d1 = pen[2][VAL]
             g1 = pen[1][VAL]
-            for i in range(3, len(pen)):
-                if i % 2 == 0:  # 主方向，计算向上特征向量，特征向量方向为高到低，最终目标是得到顶分型
-                    g = pen[i-1][VAL]
-                    d = pen[i][VAL]
-                    if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                        if g > g1:  #
-                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                            break
-                        else:  # 高-低,包含关系，前包后
-                            d1 = d
-                    else:
-                        if g >= g1:  # 低-高，包含关系,后包前
-                            g1 = g
-                        else:  # 低-低 趋势还在向下,前面一条可以忽略了
-                            d1 = d
-                            g1 = g
+            for i in range(4, len(pen), 2):  # 主方向，计算向上特征向量，特征向量方向为高到低，最终目标是得到顶分型
+                g = pen[i-1][VAL]
+                d = pen[i][VAL]
+                if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
+                    if g > g1:  # 高-高
+                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                        break
+                    else:  # 高-低,包含关系，前包后
+                        d1 = d
+                else:
+                    if g >= g1:  # 低-高，包含关系,后包前
+                        g1 = g
+                    else:  # 低-低 趋势还在向下,前面一条可以忽略了
+                        d1 = d
+                        g1 = g
         else:  # direct is "down"
+            g1 = pen[2][VAL]
             d1 = pen[1][VAL]
-            g1 = pen[0][VAL]
-            for i in range(3, len(pen)):
-                if i % 2 == 0:  # 主方向，计算向下特征向量，特征向量方向为低到高，最终目标是得到底分型
-                    d = pen[i-1][VAL]
-                    g = pen[i][VAL]
-                    if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                        if g > g1:  # 高-高, 趋势还在向上，没意义忽略
-                            d1 = d
-                            g1 = g
-                        else:  # 高-低,包含关系，前包后
-                            g1 = g
-                    else:
-                        if g >= g1:  # 低-高，包含关系,后包前
-                            d1 = d
-                        else:  # 低-低 趋势还在向下,前面一条可以忽略了
-                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                            break
+            for i in range(4, len(pen), 2):  # 主方向，计算向下特征向量，特征向量方向为低到高，最终目标是得到底分型
+                d = pen[i-1][VAL]
+                g = pen[i][VAL]
+                if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
+                    if g > g1:  # 高-高, 趋势还在向上，没意义忽略
+                        d1 = d
+                        g1 = g
+                    else:  # 高-低,包含关系，前包后
+                        g1 = g
+                else:
+                    if g >= g1:  # 低-高，包含关系,后包前
+                        d1 = d
+                    else:  # 低-低 趋势还在向下,前面一条可以忽略了
+                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                        break
 
         return [direct, init]
 
