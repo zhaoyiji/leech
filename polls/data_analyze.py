@@ -223,8 +223,8 @@ class HistoryData(object):
         if init:
             direct = init[0]
             start = init[INIT][START]
-            d2 = init[D1]
-            g2 = init[D2]
+            d2 = init[D2]
+            g2 = init[G2]
             if direct == "down":
                 for i in range(start+2, len(pen), 2):
                     d = pen[i][VAL]
@@ -242,24 +242,61 @@ class HistoryData(object):
                             g2 = g
             else:
                 for i in range(start+2, len(pen), 2):
-                    d = pen[i][VAL]
-                    g = pen[i - 1][VAL]
-                    if d < d2:
-                        if g < g2:  # 低-低,形成了顶分型,符合要求
-                            return ["down", d2, g2, d, g, i]
-                        else:  # 低-高,包含关系,后包前
+                    d = pen[i-1][VAL]
+                    g = pen[i][VAL]
+                    if d > d2:
+                        if g > g2:  # 低-低,形成了底分型,符合要求
+                            return ["up", d2, g2, d, g, i]
+                        else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
-                        if g < g2:  # 高-低,包含关系,前包后
+                        if g > g2:  # 低-高,包含关系,后包前
                             d2 = d
-                        else:  # 高-高,忽略g2d2这一笔,继续向下
+                        else:  # 低-低,忽略d2g2这一笔,继续向下
                             d2 = d
+                            g2 = g
         else:
-            return -1
+            return []
 
     @classmethod
-    def get_seg_major(cls, pen):
-        pass
+    def get_seg_major(cls, pen, init):
+        if init:
+            direct = init[0]
+            start = init[INIT][START]
+            d2 = init[D2]
+            g2 = init[G2]
+            if direct == "down":
+                for i in range(start+2, len(pen), 2):
+                    d = pen[i-1][VAL]
+                    g = pen[i][VAL]
+                    if d > d2:
+                        if g > g2:  # 高-高,形成了底分型,符合要求
+                            return ["down", d2, g2, d, g, i]
+                        else:  # 高-低,包含关系,前包后
+                            d2 = d
+                    else:
+                        if g > g2:  # 低-高,包含关系,后包前
+                            g2 = g
+                        else:  # 高-高,忽略g2d2这一笔,继续向下
+                            d2 = d
+                            g2 = g
+            else:
+                for i in range(start+2, len(pen), 2):
+                    d = pen[i][VAL]
+                    g = pen[i-1][VAL]
+                    if d < d2:
+                        if g < g2:  # 低-低,形成了底分型,符合要求
+                            return ["up", d2, g2, d, g, i]
+                        else:  # 低-高,包含关系,后包前
+                            d2 = d
+                    else:
+                        if g < g2:  # 高-低,包含关系,前包后
+                            g2 = g
+                        else:  # 高-高,忽略d2g2这一笔,继续向下
+                            d2 = d
+                            g2 = g
+        else:
+            return []
 
     @classmethod
     def get_seg_init_minor(cls, pen):
