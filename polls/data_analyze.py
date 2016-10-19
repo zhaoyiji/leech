@@ -48,6 +48,9 @@ INIT = 1
 MAJOR = 1
 MINOR = 2
 
+POS = 5
+PEEK = 7
+
 class HistoryData(object):
     """Data Analyze
 
@@ -163,60 +166,22 @@ class HistoryData(object):
         """
         major = HistoryData.get_seg_init_major(pen)
         minor = HistoryData.get_seg_init_minor(pen)
-        if len(minor) < 1 or len(major) < 1:
-            return []
 
-        direct = init[0]
-        index = -1
-        d2 = g2 = 0
-        dd2 = gg2 = 0
-        d = g = 0
-
-        if direct == "down":
-            start = init[1][START]
-            d2 = init[MAJOR][D2]
-            g2 = init[MAJOR][G2]
-            dd2 = init[MAJOR][D2]
-            gg2 = init[MAJOR][G2]
-            for i in range(start+1, len(pen)):
-                if i % 2 == 0:
-                    d = pen[i-1][VAL]
-                    g = pen[i][VAL]
-                    if d > d2:
-                        if g > g2:  # 高-高
-                            index = i
-                            break
-                        else:  # 高-低，包含关系，前包后
-                            g2 = g
-                    else:
-                        if g > g2:  # 低-高，包含关系，后包前
-                            d2 = d
-                        else:  # 低-低
-                            d2 = d
-                            g2 = g
-                else:  # i%2 != 0
-                    g = pen[i-1][VAL]
-                    d = pen[i][VAL]
-                    if d < dd2:
-                        if g < gg2:  # 低-低
-                            index = i  # 未必break，需要与上一个高位比较高低
-                            if gg2 > pen[0][VAL]:  # 比上一个高点高，则这个高点有效
-                                index = i
-                                break
-                            else:  # 比上一个高点低，无效顶
-                                pass  # ?
-                        else:  # 低-高,包含关系，
-                            gg2 = g
-                    else:
-                        if g < gg2:  # 高-低，包含关系
-                            dd2 = d
-                        else:  # 高-高
-                            dd2 = d
-                            gg2 = g
-        else:  # direct == "up"
-            pass
-
-        return index
+        negative = HistoryData.get_seg_minor(pen, minor)
+        positive = HistoryData.get_seg_minor(pen, major)
+        if negative:
+            if positive:
+                if positive[POS] < negative[POS]:
+                    return positive[POS]
+                else:
+                    return negative[POS]
+            else:
+                return negative[POS]
+        else:
+            if positive:
+                return positive[POS]
+            else:
+                return -1
 
     @classmethod
     def get_seg_minor(cls, pen, init):
@@ -231,7 +196,8 @@ class HistoryData(object):
                     g = pen[i-1][VAL]
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
-                            return ["down", d2, g2, d, g, i]
+                            if g2 > pen[0][VAL]:  # 顶不高于上一个顶，忽略，高于上一个顶才有效
+                                return ["down", d2, g2, d, g, i, TOP, g2]
                         else:  # 低-高,包含关系,后包前
                             g2 = g
                     else:
@@ -246,7 +212,8 @@ class HistoryData(object):
                     g = pen[i][VAL]
                     if d > d2:
                         if g > g2:  # 低-低,形成了底分型,符合要求
-                            return ["up", d2, g2, d, g, i]
+                            if d2 < pen[0][VAL]:  # 底不低于上一个底，忽略，低于上一个底才有效
+                                return ["up", d2, g2, d, g, i, BOT, d2]
                         else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
@@ -271,7 +238,7 @@ class HistoryData(object):
                     g = pen[i][VAL]
                     if d > d2:
                         if g > g2:  # 高-高,形成了底分型,符合要求
-                            return ["down", d2, g2, d, g, i]
+                            return ["down", d2, g2, d, g, i, BOT, d2]
                         else:  # 高-低,包含关系,前包后
                             d2 = d
                     else:
@@ -285,8 +252,8 @@ class HistoryData(object):
                     d = pen[i][VAL]
                     g = pen[i-1][VAL]
                     if d < d2:
-                        if g < g2:  # 低-低,形成了底分型,符合要求
-                            return ["up", d2, g2, d, g, i]
+                        if g < g2:  # 低-低,形成了顶分型,符合要求
+                            return ["up", d2, g2, d, g, i, TOP, g2]
                         else:  # 低-高,包含关系,后包前
                             d2 = d
                     else:
