@@ -51,6 +51,7 @@ MINOR = 2
 POS = 5
 PEEK = 7
 
+
 class HistoryData(object):
     """Data Analyze
 
@@ -131,12 +132,12 @@ class HistoryData(object):
         return ma
 
     def _get_segment(self):
-        index = HistoryData.get_point(self._pen)
+        index = HistoryData.get_seg_point(self._pen)
         pen = self._pen
         while index != -1:
             self._segment.append(index)
             pen = pen[index:]
-            index = HistoryData.get_point(pen)
+            index = HistoryData.get_seg_point(pen)
 
         for i in range(1, len(self._segment)):
             self._segment[i] += self._segment[i-1]
@@ -144,7 +145,7 @@ class HistoryData(object):
         return self._segment
 
     @classmethod
-    def _get_seg_point(cls, pen):
+    def get_seg_point(cls, pen):
         """通过笔得到线段
 
         算法逻辑:
