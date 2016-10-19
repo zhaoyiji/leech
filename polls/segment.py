@@ -11,8 +11,61 @@ INIT = 1
 MAJOR = 1
 MINOR = 2
 
+POS = 5
+
 
 class Segment(object):
+
+    @classmethod
+    def get_segment(cls, pen):
+        index = Segment.get_seg_point(pen)
+        segment = []
+        while index != -1:
+            segment.append(index)
+            pen = pen[index:]
+            index = Segment.get_seg_point(pen)
+
+        for i in range(1, len(segment)):  # 把相对位置换算成绝对位置
+            segment[i] += segment[i-1]
+
+        return segment
+
+    @classmethod
+    def get_seg_point(cls, pen):
+        """通过笔得到线段
+
+        算法逻辑:
+        [1]:假定第一个分型为线段起点
+        [2]:第一笔的方向为主方向,第二笔的方向为次方向,同时计算2组标准特征向量(做包含处理), pen[0][1] > pen[1][1]为下,否则为上
+        [3]:计算出主方向的特征序列分型,第一笔向下,则计算底分型,反之计算顶分型 特征序列为 p1p2-p3p4-p5p6...
+        [4]:计算出次方向的特征序列分型,第二笔向上,则计算顶分型,反之计算底分型 特征序列为 p0p1-p2p3-p4p5...
+        [5]:[3]计算得到的分型比[4]得到的分型先出现,则立刻得到了此次线段端点,计算结束
+        [6]:[4]计算得到的分型比[3]得到的分型先出现,如果第一笔向下,分型顶比线段起点高,则立刻得到了线段端点,该端点时上一个端点的延续
+            ,比线段起点低,则忽略该分型,继续向下计算。
+
+        其他说明:这里可能出现 线段端点 高-高,低-低的情况,高高则忽略上一个高,低低则忽略上一个低
+
+        :param pen:
+            pen[i][0] = index
+            pen[i][1] = val
+        :return:
+            point[0] = index
+        """
+        minor = Segment.get_seg_minor(pen)
+        major = Segment.get_seg_minor(pen)
+        if minor:
+            if major:
+                if major[POS] < minor[POS]:
+                    return major[POS]
+                else:
+                    return minor[POS]
+            else:
+                return minor[POS]
+        else:
+            if major:
+                return major[POS]
+            else:
+                return -1
 
     @classmethod
     def get_seg_minor(cls, pen):
