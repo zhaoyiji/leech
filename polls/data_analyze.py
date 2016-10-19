@@ -231,6 +231,7 @@ class HistoryData(object):
 
         return self._part
 
+    @property
     def _get_part_index(self):
         index = []
         peek = self._get_peek_index()
