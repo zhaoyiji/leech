@@ -52,7 +52,7 @@ class Segment(object):
             point[0] = index
         """
         minor = Segment.get_seg_minor(pen)
-        major = Segment.get_seg_minor(pen)
+        major = Segment.get_seg_major(pen)
         if minor:
             if major:
                 if major[POS] < minor[POS]:
@@ -70,11 +70,12 @@ class Segment(object):
     @classmethod
     def get_seg_minor(cls, pen):
         init = Segment.get_seg_init_minor(pen)
-        if init:
+        if init and init[INIT]:
             direct = init[0]
             start = init[INIT][START]
-            d2 = init[D2]
-            g2 = init[G2]
+            index = start - 1
+            d2 = init[INIT][D2]
+            g2 = init[INIT][G2]
             if direct == "down":
                 for i in range(start+2, len(pen), 2):
                     d = pen[i][VAL]
@@ -82,15 +83,17 @@ class Segment(object):
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
                             if g2 > pen[0][VAL]:  # 顶不高于上一个顶，忽略，高于上一个顶才有效
-                                return ["down", d2, g2, d, g, i]
+                                return ["down", d2, g2, d, g, index]
                         else:  # 低-高,包含关系,后包前
                             g2 = g
+                            index = i - 1
                     else:
                         if g < g2:  # 高-低,包含关系,前包后
                             d2 = d
                         else:  # 高-高,忽略g2d2这一笔,继续向下
                             d2 = d
                             g2 = g
+                            index = i - 1
             else:
                 for i in range(start+2, len(pen), 2):
                     d = pen[i-1][VAL]
@@ -98,14 +101,16 @@ class Segment(object):
                     if d > d2:
                         if g > g2:  # 低-低,形成了底分型,符合要求
                             if d2 < pen[0][VAL]:  # 底不低于上一个底，忽略，低于上一个底才有效
-                                return ["up", d2, g2, d, g, i]
+                                return ["up", d2, g2, d, g, index]
                         else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
                         if g > g2:  # 低-高,包含关系,后包前
                             d2 = d
+                            index = i - 1
                         else:  # 低-低,忽略d2g2这一笔,继续向下
                             d2 = d
+                            index = i - 1
                             g2 = g
         else:
             return []
@@ -113,25 +118,28 @@ class Segment(object):
     @classmethod
     def get_seg_major(cls, pen):
         init = Segment.get_seg_init_major(pen)
-        if init:
+        if init and init[INIT]:
             direct = init[0]
             start = init[INIT][START]
-            d2 = init[D2]
-            g2 = init[G2]
+            index = start - 1
+            d2 = init[INIT][D2]
+            g2 = init[INIT][G2]
             if direct == "down":
                 for i in range(start+2, len(pen), 2):
                     d = pen[i-1][VAL]
                     g = pen[i][VAL]
                     if d > d2:
                         if g > g2:  # 高-高,形成了底分型,符合要求
-                            return ["down", d2, g2, d, g, i]
+                            return ["down", d2, g2, d, g, index]
                         else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
                         if g > g2:  # 低-高,包含关系,后包前
                             d2 = d
+                            index = i - 1
                         else:  # 高-高,忽略g2d2这一笔,继续向下
                             d2 = d
+                            index = i - 1
                             g2 = g
             else:
                 for i in range(start+2, len(pen), 2):
@@ -139,15 +147,17 @@ class Segment(object):
                     g = pen[i-1][VAL]
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
-                            return ["up", d2, g2, d, g, i]
+                            return ["up", d2, g2, d, g, index]
                         else:  # 低-高,包含关系,后包前
                             g2 = g
+                            index = i - 1
                     else:
                         if g < g2:  # 高-低,包含关系,前包后
                             d2 = d
                         else:  # 高-高,忽略d2g2这一笔,继续向下
                             d2 = d
                             g2 = g
+                            index = i - 1
         else:
             return []
 
@@ -264,3 +274,28 @@ class Segment(object):
                         break
 
         return [direct, init]
+
+if __name__ == "__main__":
+    print "segment unittest start"
+
+    # pen1 = [[0, 6], [1, 4], [2, 5], [3, 1], [4, 3], [5, 2], [6, 7]]
+    # pen2 = [[0, 2], [1, 1], [2, 5], [3, 4], [4, 8], [5, 6], [6, 7], [7, 3]]
+    # pen3 = [[0, 8], [1, 1], [2, 3], [3, 2], [4, 7], [5, 5], [6, 6], [7, 4]]
+    # pen4 = [[0, 8], [1, 1], [2, 7], [3, 4], [4, 2], [5, 3], [6, 5], [7, 6],
+    #         [8, 11], [9, 9], [10, 10], [11, 8]]
+    pen5 = [[0, 8], [1, 1], [2, 2], [3, 4], [4, 7], [5, 3], [6, 5], [7, 6],
+            [8, 11], [9, 9], [10, 10], [11, 8]]
+
+    # seg = Segment.get_segment(pen1)
+    # print seg
+    # seg = Segment.get_segment(pen2)
+    # print seg
+    # seg = Segment.get_segment(pen3)
+    # print seg
+    # seg = Segment.get_segment(pen4)
+    # print seg
+    seg = Segment.get_segment(pen5)
+    print seg
+
+    print "segment unintest end"
+
