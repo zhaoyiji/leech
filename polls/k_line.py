@@ -148,10 +148,19 @@ class KLine1Min(KLine):
         return data
 
     def get_peek(self, count):
-        cursor = self._conn.execute("SELECT MAX(high), MIN(low) from min1 ORDER BY fetch_time DESC LIMIT %d"
+        cursor = self._conn.execute("SELECT high, low from min1 ORDER BY fetch_time DESC LIMIT %d"
                                     % count)
-        peek = cursor.fetchall()
-        return peek[0]
+        data = cursor.fetchall()
+        # print "peek:", data
+        higher = 0
+        lower = 100000000.0
+        for item in data:
+            if item[0] > higher:
+                higher = item[0]
+            if item[1] < lower:
+                lower = item[1]
+
+        return [higher, lower]
 
 
 class KLine5Min(KLine):
@@ -292,6 +301,12 @@ class KLineDay(KLine):
 
 class KLineMonth(KLine):
     pass
+
+
+if __name__ == "__main__":
+    kline1 = KLine1Min("sh000001")
+    peek = kline1.get_peek(250)
+    print peek
 
 
 # if __name__ == "__main__":

@@ -60,6 +60,7 @@ class HistoryData(object):
         """
         kline = k_line.KLine1Min(self._code)
         self._line = kline.fetch(count)  # 获取数据库记录
+        print "### _line #############################################"
         print self._line
         print "### _turnoff #############################################"
         self._turnoff = self._mark_turnoff()  # 标记高低点
@@ -314,4 +315,4 @@ class HistoryData(object):
 
 if __name__ == "__main__":
     history = HistoryData('sh000001')
-    history.analyze(250)
+    history.analyze(350)
