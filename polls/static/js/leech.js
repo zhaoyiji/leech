@@ -4,7 +4,7 @@
 
 var baseline_x = 20;//横轴留出左右各10px的空间
 var baseline_y = 420;//纵轴留出上下各10px的空间
-
+var ENLARGE = 3;//放大倍数
 function DrawPen(base, low, pen, color, cxt) {
     cxt.beginPath();
     cxt.strokeStyle = color
@@ -12,11 +12,11 @@ function DrawPen(base, low, pen, color, cxt) {
         //alert(pen[i])
         if (i == 0)
         {
-            cxt.moveTo(baseline_x + 4*pen[i][0], baseline_y - (pen[i][1]-low) * base);
+            cxt.moveTo(baseline_x + ENLARGE*pen[i][0], baseline_y - (pen[i][1]-low) * base);
         }
         else
         {
-            cxt.lineTo(baseline_x + 4*pen[i][0], baseline_y - (pen[i][1]-low) * base);
+            cxt.lineTo(baseline_x + ENLARGE*pen[i][0], baseline_y - (pen[i][1]-low) * base);
         }
     }
     cxt.stroke();

@@ -65,12 +65,12 @@ class HistoryData(object):
         print "### _turnoff #############################################"
         self._turnoff = self._mark_turnoff()  # 标记高低点
         print self._turnoff
+        print "### _exclude #############################################"
+        self._exclude = self._get_exclude()
+        print self._exclude
         print "### _index #############################################"
         self._index = self._get_part_index  # 计算分型并且得到分型的坐标
         print self._index
-        print "### _index #############################################"
-        self._exclude = self._get_exclude()
-        print self._exclude
         print "### _part #############################################"
         self._part = self._get_part()  # 标记分型
         print self._part
@@ -161,10 +161,10 @@ class HistoryData(object):
         for i in range(0, len(self._index)):
             index = self._index[i]
             pen = [index]
-            if self._turnoff[index][TURNOFF] == TOP:
-                pen.append(self._turnoff[index][HIGH])
+            if self._exclude[index][TURNOFF] == TOP:
+                pen.append(self._exclude[index][HIGH])
             else:
-                pen.append(self._turnoff[index][LOW])
+                pen.append(self._exclude[index][LOW])
 
             self._pen.append(pen)
 
@@ -173,12 +173,12 @@ class HistoryData(object):
     def _get_part(self):
         for i in self._index:
             val = []
-            if self._turnoff[i][TURNOFF] == TOP:
-                val.append(self._turnoff[i][HIGH])
-                val.append(self._turnoff[i][DT])
+            if self._exclude[i][TURNOFF] == TOP:
+                val.append(self._exclude[i][HIGH])
+                val.append(self._exclude[i][DT])
             else:
-                val.append(self._turnoff[i][LOW])
-                val.append(self._turnoff[i][DT])
+                val.append(self._exclude[i][LOW])
+                val.append(self._exclude[i][DT])
 
             self._part.append(val)
 
@@ -190,8 +190,8 @@ class HistoryData(object):
         peek = self._get_peek_index()
         last_peek = peek[0]
         for i in peek:
-            last = self._turnoff[last_peek]
-            curr = self._turnoff[i]
+            last = self._exclude[last_peek]
+            curr = self._exclude[i]
             if last[TURNOFF] == TOP:  # 前一个分析的是顶
                 if curr[TURNOFF] == TOP:  # 一顶之后又是一顶,这里有可能更新当前的顶位置
                     if curr[HIGH] > last[HIGH]:  # 这个顶比上一个顶要高，要按这个来算,否则的话该顶被忽略
@@ -214,7 +214,7 @@ class HistoryData(object):
     def _get_peek_index(self):
         i = 0
         index = []
-        for item in self._turnoff:
+        for item in self._exclude:
             if item[TURNOFF] != MID:
                 index.append(i)
             i += 1
@@ -291,7 +291,7 @@ class HistoryData(object):
         return self._turnoff
 
     def format_part_view(self):
-        line = self._turnoff[:]  # _turnoff 是列表，_line是元组，选择使用_turnoff
+        line = self._exclude[:]  # _turnoff 是列表，_line是元组，选择使用_turnoff
         for item in line:
             item.append(IGN)
 
@@ -315,4 +315,4 @@ class HistoryData(object):
 
 if __name__ == "__main__":
     history = HistoryData('sh000001')
-    history.analyze(350)
+    history.analyze(200)

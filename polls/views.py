@@ -6,7 +6,7 @@ import json
 import k_line
 import data_analyze
 
-COUNT = 300
+COUNT = 500
 
 # Create your views here.
 def index(request):
@@ -28,9 +28,15 @@ def index(request):
     print "peek: ", peek
     base = 400/(float(peek[0]) - float(peek[1]))
     print "base: ", base
-    lines = {"kline": json.dumps(k),
-             "exclude": json.dumps(exclude),
-             "turnoff": json.dumps(turnoff),
+    # lines = {"kline": json.dumps(k),
+    #          "turnoff": json.dumps(turnoff),
+    #          "exclude": json.dumps(exclude),
+    #          "part": json.dumps(part),
+    #          "pen": json.dumps(pen),
+    #          "seg": json.dumps(seg),
+    #          "base": base,
+    #          "min": float(peek[1])}
+    lines = {"exclude": json.dumps(exclude),
              "part": json.dumps(part),
              "pen": json.dumps(pen),
              "seg": json.dumps(seg),
