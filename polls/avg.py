@@ -2,43 +2,36 @@
 
 CLOSED = 2
 
+MA5_T = 5
+MA10_T = 10
 
-class AvgLine(object):
-    def __init__(self, data, count):
-        self._data = data
-        self._count = count
-        self._avg = []
 
-        self.calc()
+def get_ma_x(data, period):
+    if len(data) < period:
+        return []
 
-    def get(self):
-        return self._avg
+    ma = []
+    cal = 0.0
+    for i in range(0, len(data)):
+        cal += data[i][CLOSED]
+        if i >= period:
+            cal -= data[i-period][CLOSED]
+            ma.append(cal / period)
+        elif i == period - 1:
+            ma.append(cal / period)
+        else:
+            ma.append(0.0)
 
-    def calc(self):
-        """
 
-        :rtype: []
-        """
-        if len(self._data) < self._count:
-            return []
+def get_ma_baseline(data):
+    p = [MA5_T, MA10_T]
+    ma = [[MA5_T], [MA10_T]]
+    for i in range(0, len(p)):
+        ma[i] = get_ma_x(data, p[i])
 
-        total = 0.0
-        count = self._count - 1
-        for i in range(0, count):
-            total += self._data[i][CLOSED]
-            self._avg.append(0.0)
-
-        total += self._data[count][CLOSED]
-        avg = total / self._count
-        self._avg.append(avg)
-
-        count = self._count
-        for i in range(count, len(self._data)):
-            total += self._data[i][CLOSED]
-            total -= self._data[i - count][CLOSED]
-            avg = total / count
-            self._avg.append(avg)
-
+    return ma
 
 if __name__ == "__main__":
     print "avg test"
+    exclude = []
+    get_ma_baseline(exclude)
