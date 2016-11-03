@@ -9,19 +9,19 @@
 
 <body>
 
-{#<canvas id="kline" width="1040" height="440" style="border:1px solid #000000;">#}
+{#<canvas id="kline" width="1240" height="440" style="border:1px solid #000000;">#}
 {#    Your browser does not support the canvas element.#}
 {#</canvas>#}
-{#<canvas id="turnoff" width="1040" height="440" style="border:1px solid #000000;">#}
+{#<canvas id="turnoff" width="1240" height="440" style="border:1px solid #000000;">#}
 {#    Your browser does not support the canvas element.#}
 {#</canvas>#}
-<canvas id="exclude" width="1040" height="440" style="border:1px solid #000000;">
+<canvas id="exclude" width="1240" height="440" style="border:1px solid #000000;">
     Your browser does not support the canvas element.
 </canvas>
-<canvas id="part" width="1040" height="440" style="border:1px solid #000000;">
+<canvas id="part" width="1240" height="440" style="border:1px solid #000000;">
     Your browser does not support the canvas element.
 </canvas>
-<canvas id="pen" width="1040" height="440" style="border:1px solid #000000;">
+<canvas id="pen" width="1240" height="440" style="border:1px solid #000000;">
     Your browser does not support the canvas element.
 </canvas>
 
@@ -34,7 +34,7 @@
     var INCLUDE = 4;
     var TURNOFF = 5;
     var PART = 6;
-    var ENLARGE = 3;
+    var ENLARGE = 1;
 
 {#    var line = {{ kline|safe }};#}
     var exclude = {{ exclude|safe }};
@@ -42,8 +42,8 @@
     var part = {{ part|safe }};
     var pen = {{ pen|safe }};
     var seg = {{ seg|safe }};
-
-{#    alert(exclude)#}
+    var ma5 = {{ ma5|safe }};
+    var ma10 = {{ ma10|safe }};
 
     var low = 0;
     var base = 0;
@@ -91,6 +91,9 @@
 
     DrawPen(base, low, pen, "black",ctx_pen);
     DrawPen(base, low, seg, "blue", ctx_pen);
+
+    DrawMA(base, low, ma5, "red", ctx_pen);
+    DrawMA(base, low, ma10, "green", ctx_pen);
 
 </script>
 

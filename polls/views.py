@@ -6,7 +6,7 @@ import json
 import k_line
 import data_analyze
 
-COUNT = 500
+COUNT = 1500
 
 
 # Create your views here.
@@ -26,7 +26,10 @@ def index(request):
     print "pen: ", pen
     seg = history.format_segment_view()
     print "seg: ", seg
-    print "part ", part
+    ma5 = history.format_ma5_view
+    ma10 = history.format_ma10_view
+    print "ma5: ", ma5
+    print "ma10: ", ma10
     peek = kline.get_peek(COUNT)
     print "peek: ", peek
     base = 400/(float(peek[0]) - float(peek[1]))
@@ -43,6 +46,8 @@ def index(request):
             "part": json.dumps(part),
             "pen": json.dumps(pen),
             "seg": json.dumps(seg),
+            "ma5": json.dumps(ma5),
+            "ma10": json.dumps(ma10),
             "base": base,
             "min": float(peek[1])}
 

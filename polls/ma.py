@@ -22,6 +22,8 @@ def get_ma_x(data, period):
         else:
             ma.append(0.0)
 
+    return ma
+
 
 def get_ma_baseline(data):
     p = [MA5_T, MA10_T]
@@ -29,6 +31,7 @@ def get_ma_baseline(data):
     for i in range(0, len(p)):
         ma[i] = get_ma_x(data, p[i])
 
+    print ma
     return ma
 
 if __name__ == "__main__":

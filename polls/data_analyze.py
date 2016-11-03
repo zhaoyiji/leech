@@ -287,12 +287,16 @@ class HistoryData(object):
         return point
 
     @property
-    def format_ma_view(self):
-        return self._ma
+    def format_ma5_view(self):
+        return self._ma[0]
+
+    @property
+    def format_ma10_view(self):
+        return self._ma[1]
 
     def format_view(self):
         return self.format_part_view()
 
 if __name__ == "__main__":
     history = HistoryData('sh000001')
-    history.analyze(200)
+    history.analyze(12)
