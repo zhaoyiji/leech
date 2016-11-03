@@ -2,6 +2,7 @@
 
 import k_line
 import segment
+import ma
 
 HIGH = 0
 LOW = 1
@@ -27,9 +28,6 @@ MID = "middle"
 
 MA5 = 5
 MA10 = 10
-MA20 = 20
-MA60 = 60
-MA250 = 250
 
 
 class HistoryData(object):
@@ -40,15 +38,14 @@ class HistoryData(object):
     """
     def __init__(self, code):
         self._code = code
-        self._line = []
-        # self._include = []
-        self._exclude = []
-        self._turnoff = []
-        self._index = []
-        self._part = []
-        self._pen = []
-        self._segment = []
-        self._ma = [[MA5], [MA10], [MA20], [MA60], [MA250]]
+        self._line = []  # 原始数据
+        self._turnoff = []  # 标记转折点
+        self._exclude = []  # 标记转折点->处理包含关系
+        self._index = []  # 标记分型位置
+        self._part = []  # 标记分型
+        self._pen = []  # 标记笔位置
+        self._segment = []  # 标记线段
+        self._ma = [[MA5], [MA10]]  # 标记均线
 
     def analyze(self, count):
         """Get ALl Records from history record file min5.dat.
@@ -60,57 +57,36 @@ class HistoryData(object):
         """
         kline = k_line.KLine1Min(self._code)
         self._line = kline.fetch(count)  # 获取数据库记录
-        print "### _line #############################################"
-        print self._line
-        print "### _turnoff #############################################"
+        # print "### _line #############################################"
+        # print self._line
+        # print "### _turnoff #############################################"
         self._turnoff = self._mark_turnoff()  # 标记高低点
-        print self._turnoff
-        print "### _exclude #############################################"
+        # print self._turnoff
+        # print "### _exclude #############################################"
         self._exclude = self._get_exclude()
-        print self._exclude
+        # print self._exclude
         print "### _index #############################################"
         self._index = self._get_part_index  # 计算分型并且得到分型的坐标
         print self._index
-        print "### _part #############################################"
+        # print "### _part #############################################"
         self._part = self._get_part()  # 标记分型
-        print self._part
-        print "### _pen #############################################"
+        # print self._part
+        # print "### _pen #############################################"
         self._get_pen()
         print self._pen
         print "### _segment #############################################"
         self._get_segment()
         print self._segment
-        print "### view #############################################"
-        self.format_segment_view()
-        line = self.format_view()
+        print "### _ma #############################################"
+        self._get_ma()
+        print self._ma
+        # print "### view #############################################"
+        # self.format_segment_view()
+        # seg = self.format_view()
         print "### end #############################################"
 
-        return line
-
     def _get_ma(self):
-        p = [MA5, MA10, MA20, MA60, MA250]
-        for i in range(0, 5):
-            self._ma[i] = self._get_ma_x(p[i])
-
-        return self._ma
-
-    def _get_ma_x(self, period):
-        if len(self._line) < period:
-            return []
-
-        ma = []
-        cal = 0.0
-        for i in range(0, len(self._line)):
-            cal += self._line[i][CLOSED]
-            if i >= period:
-                cal -= self._line[i-period][CLOSED]
-                ma.append(cal/period)
-            elif i == period - 1:
-                ma.append(cal/period)
-            else:
-                ma.append(0.0)
-
-        return ma
+        self._ma = ma.get_ma_baseline(self._exclude)
 
     def _get_segment(self):
         self._segment = segment.Segment.get_segment(self._pen)
@@ -291,7 +267,7 @@ class HistoryData(object):
         return self._turnoff
 
     def format_part_view(self):
-        line = self._exclude[:]  # _turnoff 是列表，_line是元组，选择使用_turnoff
+        line = self._exclude[:]  # _exclude 是列表，_line是元组，选择使用_exclude
         for item in line:
             item.append(IGN)
 
@@ -309,6 +285,10 @@ class HistoryData(object):
             point.append(self._pen[item])
 
         return point
+
+    @property
+    def format_ma_view(self):
+        return self._ma
 
     def format_view(self):
         return self.format_part_view()
