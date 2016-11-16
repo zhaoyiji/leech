@@ -299,4 +299,4 @@ class HistoryData(object):
 
 if __name__ == "__main__":
     history = HistoryData('sh000001')
-    history.analyze(12)
+    history.analyze(1500)

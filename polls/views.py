@@ -6,7 +6,7 @@ import json
 import k_line
 import data_analyze
 
-COUNT = 1500
+COUNT = 2000
 
 
 # Create your views here.

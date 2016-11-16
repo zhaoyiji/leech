@@ -130,7 +130,8 @@ class Segment(object):
                     g = pen[i][VAL]
                     if d > d2:
                         if g > g2:  # 高-高,形成了底分型,符合要求
-                            return ["down", d2, g2, d, g, index]
+                            if d < pen[0][VAL]:  # 低点必须小于上一个高点才有效
+                                return ["down", d2, g2, d, g, index]
                         else:  # 高-低,包含关系,前包后
                             g2 = g
                     else:
@@ -147,7 +148,8 @@ class Segment(object):
                     g = pen[i-1][VAL]
                     if d < d2:
                         if g < g2:  # 低-低,形成了顶分型,符合要求
-                            return ["up", d2, g2, d, g, index]
+                            if g > pen[0][VAL]:  # 高点大于起点才算有效
+                                return ["up", d2, g2, d, g, index]
                         else:  # 低-高,包含关系,后包前
                             g2 = g
                             index = i - 1
@@ -244,8 +246,12 @@ class Segment(object):
                 d = pen[i][VAL]
                 if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
                     if g > g1:  # 高-高
-                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                        break
+                        if g <= pen[0][VAL]:  # 高点必须大于第一个点
+                            g1 = g
+                            d1 = d
+                        else:
+                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                            break
                     else:  # 高-低,包含关系，前包后
                         d1 = d
                 else:
@@ -261,7 +267,7 @@ class Segment(object):
                 d = pen[i-1][VAL]
                 g = pen[i][VAL]
                 if d > d1:  # 分四种情况分析(1 VS 2，低点在前，高点在后)
-                    if g > g1:  # 高-高, 趋势还在向上，没意义忽略
+                    if g > g1:  # 高-高, 趋势还在向上，前面一条可以忽略了
                         d1 = d
                         g1 = g
                     else:  # 高-低,包含关系，前包后
@@ -269,9 +275,13 @@ class Segment(object):
                 else:
                     if g >= g1:  # 低-高，包含关系,后包前
                         d1 = d
-                    else:  # 低-低 趋势还在向下,前面一条可以忽略了
-                        init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
-                        break
+                    else:  # 低-低
+                        if d >= pen[0][VAL]:  # 低点必须小于第一个点
+                            d1 = d
+                            g1 = g
+                        else:
+                            init = [d1, g1, d, g, i]  # 得到符合要求的特征向量
+                            break
 
         return [direct, init]
 
